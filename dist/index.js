@@ -1,4 +1,4 @@
-const manifest = {"name":"Hiddify VPN","author":"steam-decky","flags":[],"api_version":2,"publish":{"tags":["vpn","network","hiddify"],"description":"Control Hiddify VPN from Game Mode. Start/stop VPN with one button."}};
+const manifest = {"name":"Hiddify VPN","author":"denmrnngp-cloud","flags":[],"api_version":2,"version":"1.2.0","publish":{"tags":["vpn","network","hiddify","proxy","sing-box"],"description":"Control Hiddify VPN from Game Mode. Toggle VPN on/off, switch profiles, view connection status. Requires Hiddify installed via the installer — see github.com/denmrnngp-cloud/hiddify-steam-deck","image":"https://raw.githubusercontent.com/denmrnngp-cloud/decky-hiddify/main/assets/store.png"}};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
 if (!internalAPIConnection) {
@@ -86,7 +86,12 @@ function VpnPanel() {
     SP_REACT.useEffect(() => {
         fetchStatus();
         fetchProfiles();
-        const listener = addEventListener("vpn_status_changed", (s) => setStatus(prev => ({ ...prev, ...s })));
+        const listener = addEventListener("vpn_status_changed", (s) => {
+            if (s.dropped) {
+                toaster.toast({ title: "Hiddify VPN", body: "VPN disconnected — tap to reconnect", duration: 5000 });
+            }
+            setStatus(prev => ({ ...prev, ...s }));
+        });
         const iv = setInterval(fetchStatus, 5000);
         return () => { removeEventListener("vpn_status_changed", listener); clearInterval(iv); };
     }, []);
@@ -94,7 +99,7 @@ function VpnPanel() {
         if (loading)
             return;
         setLoading(true);
-        const wasOn = status.connected || status.running;
+        const wasOn = status.connected;
         try {
             const result = wasOn ? await stopVpn() : await startVpn();
             if (!result.success) {
@@ -144,7 +149,7 @@ function VpnPanel() {
             setSwitching(false);
         }
     };
-    const isOn = status.connected || status.running;
+    const isOn = status.connected;
     // Status dot color
     const dotColor = status.connected ? "#4ade80" : status.running ? "#facc15" : "#f87171";
     const statusText = loading
